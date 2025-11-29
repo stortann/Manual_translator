@@ -1,4 +1,4 @@
-# Manual_GER_ENG_translator
+# Manual_translator
 This is a "transaltor" that you make yourself - it takes each word from the form input and tries to find it in an Excel file where this macro rests, and then returns the translated version. Every word needs to be added manually and there's no spellcheck, which is sadly the best way of doing the task for which this macro was made. 
 There's also a couple of QOL macros, like replacing german-specific letters, cleaning insignificant spaces or changing how some specific numbers are written.
 
