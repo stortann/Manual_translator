@@ -1,13 +1,28 @@
-Attribute VB_Name = "ModuleTranslator"
-'tools-references; activate C:\Program Files (x86)\Microsoft Office\root\vfs\SystemX86\FM20.dll
+'tools-references, then browse for and activate C:\Program Files (x86)\Microsoft Office\root\vfs\SystemX86\FM20.dll
 Option Explicit
+Private Sub test() 'for testing
+'View-ImmediateWindow to see output
+    
+    Debug.Print "Hi!"
+    
+    Dim i As Integer
+    For i = 0 To 100
+        Debug.Print ""
+    Next i
+    
+End Sub
 Sub translator(Optional ByVal textGer As Variant)
 'find translation to a word input in THIS workbook
-'textGer is variant so this sub can be called from excel (explanation below)
-'vba doesnt allow to activate subs with arguments with exception of variant type
+'textGer is variant so this sub can be called from excel,
+'because vba only allows activation of subs with arguments that are variant type
     
     Application.ScreenUpdating = False
     Load frmTranslator
+    
+    If Not checkWorkSheetExists("Dictionary") Then
+        MsgBox "No Dictionary sheet, create it before running this macro"
+        Exit Sub
+    End If
     
     'if NOT first call then we have input textGer
     If Not IsMissing(textGer) Then
@@ -31,6 +46,7 @@ Sub translator(Optional ByVal textGer As Variant)
             
         Next word
         textEng = invasiveClean(textEng)
+        textEng = nonInvasiveClean(textEng)
         
         placeToClipboard (textEng)
         
@@ -42,96 +58,140 @@ Sub translator(Optional ByVal textGer As Variant)
     frmTranslator.Show (VBA.FormShowConstants.vbModeless)
     
 End Sub
-Sub workbookCleaner()
+Sub worksheetCleaner()
 'clean worksheet
     Application.ScreenUpdating = False
     
     Dim ws As Worksheet
+    Set ws = ActiveWorkbook.ActiveSheet
+    
     Dim lastCol As Integer
     Dim lastRow As Integer
     Dim i As Integer, j As Integer
     Dim cell As String
-    For Each ws In ActiveWorkbook.Worksheets
-        lastCol = ws.UsedRange.Find("*", SearchOrder:=xlByColumns, SearchDirection:=xlPrevious).Column
-        lastRow = ws.UsedRange.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious).Row
-        For i = 1 To lastCol
-            For j = 1 To lastRow
-                ws.Cells(j, i) = deleteCrossOut(ws.Cells(j, i))
-                ws.Cells(j, i) = UCase(ws.Cells(j, i))
-                ws.Cells(j, i) = invasiveClean(ws.Cells(j, i))
-                ws.Cells(j, i) = nonInvasiveClean(ws.Cells(j, i))
-            Next j
-        Next i
-    Next ws
+    
+    lastCol = ws.UsedRange.Find("*", SearchOrder:=xlByColumns, SearchDirection:=xlPrevious).Column
+    lastRow = ws.UsedRange.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious).Row
+    For i = 1 To lastCol
+        For j = 1 To lastRow
+            ws.Cells(j, i) = deleteCrossOut(ws.Cells(j, i))
+            ws.Cells(j, i) = UCase(ws.Cells(j, i))
+            ws.Cells(j, i) = invasiveClean(ws.Cells(j, i))
+            ws.Cells(j, i) = nonInvasiveClean(ws.Cells(j, i))
+        Next j
+    Next i
     
     Application.ScreenUpdating = True
+End Sub
+Sub updateDictionary()
+'update already existing dict or create new
+
+    Dim dictName As String
+    dictName = "Dictionary"
+    
+    If Not checkWorkSheetExists(dictName) Then
+        ThisWorkbook.Worksheets.Add Before:=Sheets(1)
+        ActiveSheet.Name = dictName
+    End If
+        
+    Dim wsDict As Worksheet
+    Set wsDict = ThisWorkbook.Worksheets(dictName)
+    
+    wsDict.Range("A1:B1").Font.Bold = True
+    wsDict.Range("A1").Value = "GERMAN"
+    wsDict.Range("B1").Value = "ENGLISH"
+    
+    'we start filling dictionary from new row
+    Dim dictLength As Integer
+    dictLength = 1 + wsDict.UsedRange.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious).Row
+    
+    Dim wsNumb
+    Dim i, j As Integer
+    Dim ws As Worksheet
+    Dim lastCol, lastRow As Integer
+    Dim reverse As Boolean
+    reverse = False
+    Dim translate As String
+    Dim gerText, engText As String
+    
+    For wsNumb = 2 To ThisWorkbook.Worksheets.Count
+    
+        Set ws = ThisWorkbook.Worksheets(wsNumb)
+        lastCol = ws.UsedRange.Find("*", SearchOrder:=xlByColumns, SearchDirection:=xlPrevious).Column
+        lastRow = ws.UsedRange.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious).Row
+        
+        For i = 1 To lastCol
+            If nonInvasiveClean(ws.Cells(1, i)) = "GERMAN" Then
+                
+                For j = 2 To lastRow
+                    gerText = ws.Cells(j, i)
+                    engText = ws.Cells(j, i + 1)
+                    
+                    gerText = invasiveClean(gerText)
+                    gerText = nonInvasiveClean(gerText)
+                    
+                    engText = invasiveClean(engText)
+                    engText = nonInvasiveClean(engText)
+                    
+                    If Len(gerText) > 0 And Len(engText) > 0 Then
+                        
+                        Dim word As Variant
+                        For Each word In Split(gerText, " ")
+                                                        
+                            Dim searchResult As Range
+                            Set searchResult = wsDict.Range(wsDict.Cells(1, 1), wsDict.Cells(dictLength, 1)).Find(What:=word, LookIn:=xlValues, LookAt:=xlWhole)
+            
+                            If searchResult Is Nothing And Not IsNumeric(word) Then
+                                wsDict.Cells(dictLength, 1).NumberFormat = "@"
+                                wsDict.Cells(dictLength, 2).NumberFormat = "@"
+                                wsDict.Cells(dictLength, 1).Interior.Color = RGB(255, 0, 0)
+                                wsDict.Cells(dictLength, 2).Interior.Color = RGB(255, 0, 0)
+                                wsDict.Cells(dictLength, 1) = word
+                                wsDict.Cells(dictLength, 2) = engText
+                                dictLength = dictLength + 1
+                            End If
+                        Next word
+                    End If
+                Next j
+            End If
+        Next i
+    Next wsNumb
+    
+    wsDict.UsedRange.Columns.AutoFit
+    
+    Dim cellsWithoutHeader As Range
+    Set cellsWithoutHeader = wsDict.Range(wsDict.Cells(1, 1), wsDict.Cells(dictLength, 2))
+    cellsWithoutHeader.Sort key1:=Range(wsDict.Cells(2, 1), wsDict.Cells(dictLength, 1)), _
+        order1:=xlAscending, Header:=xlYes
+    
+    wsDict.UsedRange.HorizontalAlignment = xlLeft
 End Sub
 Sub A_XXX_XXX_XX_XX()
- 
-    Application.ScreenUpdating = False
-    Dim ws As Worksheet
-    Dim lastCol As Integer
-    Dim lastRow As Integer
-    Dim i As Integer, j As Integer
-    Dim cell As String
-    For Each ws In ActiveWorkbook.Worksheets
-        lastCol = ws.UsedRange.Find("*", SearchOrder:=xlByColumns, SearchDirection:=xlPrevious).Column
-        lastRow = ws.UsedRange.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious).Row
-        For i = 1 To lastCol
-            For j = 1 To lastRow
-                ws.Cells(j, i) = a14(ws.Cells(j, i))
-            Next j
-        Next i
-    Next ws
-    Application.ScreenUpdating = True
-End Sub
-Sub AXXXXXXXXXX()
- 
-    Application.ScreenUpdating = False
-    Dim ws As Worksheet
-    Dim lastCol As Integer
-    Dim lastRow As Integer
-    Dim i As Integer, j As Integer
-    Dim cell As String
-    For Each ws In ActiveWorkbook.Worksheets
-        lastCol = ws.UsedRange.Find("*", SearchOrder:=xlByColumns, SearchDirection:=xlPrevious).Column
-        lastRow = ws.UsedRange.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious).Row
-        For i = 1 To lastCol
-            For j = 1 To lastRow
-                ws.Cells(j, i) = a10(ws.Cells(j, i))
-            Next j
-        Next i
-    Next ws
-    Application.ScreenUpdating = True
-End Sub
-Function a10(ByVal text As String) As String
-'A XXX XXX XX XX -> AXXXXXXXXXX
+'AXXXXXXXXXX ->A XXX XXX XX XX, uses func a14
 
-    Dim i As Integer
+    Application.ScreenUpdating = False
     
-    i = 1
-    Dim temp, temptext As String
+    Dim ws As Worksheet
+    Set ws = ActiveWorkbook.ActiveSheet
     
-    'replace star ChrW(42) with space ChrW(32)
-    temptext = replace(text, ChrW(42), ChrW(32))
+    Dim lastCol As Integer
+    Dim lastRow As Integer
+    Dim i As Integer, j As Integer
+    Dim cell As String
     
-    'replace all spaces ChrW(32) with nothing
-    temptext = replace(temptext, ChrW(32), "")
+    lastCol = ws.UsedRange.Find("*", SearchOrder:=xlByColumns, SearchDirection:=xlPrevious).Column
+    lastRow = ws.UsedRange.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious).Row
+    For i = 1 To lastCol
+        For j = 1 To lastRow
+            ws.Cells(j, i) = a14(ws.Cells(j, i))
+        Next j
+    Next i
     
-    If Len(temptext) = 11 Then
-        If IsNumeric(Mid(temptext, 2, Len(temptext) - 1)) Then
-            text = temptext
-        End If
-    End If
-    
-    a10 = text
-End Function
+    Application.ScreenUpdating = True
+End Sub
 Function a14(ByVal text As String) As String
 'AXXXXXXXXXX ->A XXX XXX XX XX
-
-    Dim i As Integer
     
-    i = 1
     Dim temp, temptext As String
     
     'replace star ChrW(42) with space ChrW(32)
@@ -140,8 +200,11 @@ Function a14(ByVal text As String) As String
     'replace all spaces ChrW(32) with nothing
     temptext = replace(temptext, ChrW(32), "")
     
+    Dim i As Integer
+    i = 1
+    
     If Len(temptext) = 11 Then
-        If IsNumeric(Mid(temptext, 2, Len(temptext) - 1)) Then
+        If Mid(temptext, 1, 1) = "A" And IsNumeric(Mid(temptext, 2)) Then
             text = temptext
             temp = ""
             For i = 1 To Len(text)
@@ -157,8 +220,53 @@ Function a14(ByVal text As String) As String
     
     a14 = text
 End Function
+Sub AXXXXXXXXXX()
+'A XXX XXX XX XX -> AXXXXXXXXXX, uses func a10
+
+    Application.ScreenUpdating = False
+    
+    Dim ws As Worksheet
+    Set ws = ActiveWorkbook.ActiveSheet
+    
+    Dim lastCol As Integer
+    Dim lastRow As Integer
+    Dim i As Integer, j As Integer
+    Dim cell As String
+
+    lastCol = ws.UsedRange.Find("*", SearchOrder:=xlByColumns, SearchDirection:=xlPrevious).Column
+    lastRow = ws.UsedRange.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious).Row
+    For i = 1 To lastCol
+        For j = 1 To lastRow
+            ws.Cells(j, i) = a10(ws.Cells(j, i))
+        Next j
+    Next i
+
+    Application.ScreenUpdating = True
+End Sub
+Function a10(ByVal text As String) As String
+'A XXX XXX XX XX -> AXXXXXXXXXX
+    
+    Dim temptext As String
+    
+    'replace star ChrW(42) with nothing
+    temptext = replace(text, ChrW(42), "")
+    
+    'replace all spaces ChrW(32) with nothing
+    temptext = replace(temptext, ChrW(32), "")
+    
+    If Len(temptext) = 11 Then
+        If Mid(temptext, 1, 1) = "A" And IsNumeric(Mid(temptext, 2)) Then
+            text = temptext
+        End If
+    End If
+    
+    a10 = text
+End Function
 Function nonInvasiveClean(ByVal text As String) As String
-'cleaning without deleting meaningful characters, just replacing
+'cleaning without deleting meaningful characters
+    
+    'uppercase
+    text = UCase(text)
 
     'clear spaces at the start and finish
     text = Trim(text)
@@ -215,16 +323,16 @@ Function placeToClipboard(Optional ByVal StoreText As String) As String
 'PURPOSE: Read/Write to Clipboard
 'Source: ExcelHero.com (Daniel Ferry)
 
-    Dim X As Variant
+    Dim x As Variant
     'Store as variant for 64-bit VBA support
-    X = StoreText
+    x = StoreText
     'Create HTMLFile Object
     With CreateObject("htmlfile")
         With .parentWindow.clipboardData
             Select Case True
                 Case Len(StoreText)
                     'Write to the clipboard
-                    .setData "text", X
+                    .setData "text", x
                 Case Else
                     'Read from the clipboard (no variable passed through)
                     placeToClipboard = .GetData("text")
@@ -297,7 +405,7 @@ Function deleteCrossOut(ByVal cl As Range) As String
     
 End Function
 Function checkWorkSheetExists(wsName As String) As Boolean
-'does a WS with this name exist?
+'does a WS with this name exists?
 
     checkWorkSheetExists = False
     
@@ -308,34 +416,5 @@ Function checkWorkSheetExists(wsName As String) As Boolean
             Exit Function
         End If
     Next ws
-    
-End Function
-'LEGACY FUNCTIONS BELOW
-'-------------------------------------------------------------------------------------------------------------------------
-'-------------------------------------------------------------------------------------------------------------------------
-'-------------------------------------------------------------------------------------------------------------------------
-Function ArrayLen(ByVal arr As Variant) As Integer 'legacy
-'returns len of an array
-'array should start with 1
-    
-    ArrayLen = UBound(arr) - LBound(arr) + 1
-        
-End Function
-Function getName() As Variant 'legacy
-'not needeed because of the UserForm
-'take german name from user
-'if Cancel then return False
-    
-    getName = InputBox(Prompt:="ENG", Title:="Translator", Default:="XXXXXXXXXX")
-    If StrPtr(getName) = 0 Then
-    'cancel or X
-        getName = False
-    ElseIf getName = vbNullString Then
-    'null input - try again
-        getName = getName()
-    Else
-    'functional input
-        Exit Function
-    End If
     
 End Function
