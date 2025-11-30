@@ -17,8 +17,8 @@ TAUBE | PIGEON
 ### updateDictionary
 When activated, it will create new sheet Dictionary if doesn't exist yet. If it exists, it will just add words to it. It will go through first row of every worksheet searching for cells with text "GERMAN". If found, it will start looking at cells under them. For every "word" - symbol/s without a space between, if not found in a first column of Dictionary sheet, it will copy the "translation" - a cell to the right of a cell in which the "word" resides. It will then append "word" to the first column and copied "translation" to the second column of a Dictionary sheet, both of them will be highlighted red. The result may look like a table above. 
 
-### workbookCleaner 
-Open an Excel document and activate this macro. In the active sheet in the workbook it will: <br />
+### worksheetCleaner 
+In the active sheet in the workbook it will: <br />
 &emsp;replace all german-specific letters so it won't cause problems <br />
 &emsp;delete all strikedthrough text, all types of brackets, stars *, underscores _ and non-breaking-spaces <br />
 &emsp;make all text Uppercase <br />
@@ -26,7 +26,7 @@ Open an Excel document and activate this macro. In the active sheet in the workb
 &emsp;remove extra spaces
 
 ### AXXXXXXXXXX or A_XXX_XXX_XX_XX
-It does exactly what it promises - for each cell in the active sheet that has english letter A followed by 10 digits, and/or spaces and/or stars * in different places, it will either insert spaces as seen in macro's name, or deletes all spaces.
+It does exactly what it promises - for each cell in the active sheet that has english letter A followed by 10 digits, and/or spaces and/or stars * in different places, it will either insert spaces as seen in macro's name, or deletes all spaces between numbers. All of the stars will be deleted.
 
 ## Change Log
  V2.0 - added updateDictionary(), changed scope of other macros to be limited to only 1 sheet instead of a whole workbook, small changes to almost everything in MyModule
