@@ -14,3 +14,7 @@ Open an Excel document and activate this macro. On every sheet in the workbook i
 &emsp;remove extra spaces
 ### AXXXXXXXXXX or A_XXX_XXX_XX_XX
 It does exactly what it promises - for each cell that has english letter A followed by 10 digits, it either insert spaces as seen in macro's name, or deletes all spaces.
+
+
+## Chnage Log
+V1.0 - initial release
