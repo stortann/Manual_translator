@@ -29,5 +29,6 @@ Open an Excel document and activate this macro. In the active sheet in the workb
 It does exactly what it promises - for each cell in the active sheet that has english letter A followed by 10 digits, and/or spaces and/or stars * in different places, it will either insert spaces as seen in macro's name, or deletes all spaces.
 
 ## Change Log
-### V2.0 - added updateDictionary(), changed scope of other macros to be limited to only 1 sheet instead of a whole workbook, small changes to almost everything in MyModule
-### V1.0 - initial release
+ V2.0 - added updateDictionary(), changed scope of other macros to be limited to only 1 sheet instead of a whole workbook, small changes to almost everything in MyModule
+ 
+ V1.0 - initial release
