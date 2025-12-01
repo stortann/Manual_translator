@@ -17,7 +17,7 @@ BROT | BREAD
 TAUBE | PIGEON
 
 ### updateDictionary
-When activated, it will create new sheet Dictionary if doesn't exist yet. If it exists, it will just add words to it. It will go through first row of every worksheet searching for cells with text "GERMAN". If found, it will start looking at cells under them. For every "word" - symbol/s without a space between, if not found in a first column of Dictionary sheet, it will copy the "translation" - a cell to the right of a cell in which the "word" resides. It will then append "word" to the first column and copied "translation" to the second column of a Dictionary sheet, both of them will be highlighted red. The result may look like a table above. 
+When activated, it will create new sheet Dictionary if doesn't exist yet. If it exists, it will just add words to it. It will go through first row of every worksheet searching for cells with text "GERMAN". If found, it will start looking at cells under them. For every "word" - symbol/s without a space between, if not found in a first column of Dictionary sheet, it will copy the "translation" - a cell to the right of a cell in which the "word" resides. It will then append "word" to the first column and copied "translation" to the second column of a Dictionary sheet, both of them will be highlighted red. If any "word" doesn't yet have its "translation", then the empty cell where a translation should be will be colored orange.
 
 ### worksheetCleaner 
 In the active sheet in the workbook it will: <br />
